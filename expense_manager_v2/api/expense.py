@@ -52,7 +52,44 @@ def get_dashboard_data():
             summary[state] += 1
         summary["total_amount"] += flt(c.total_claimed_amount)
 
-    return {"summary": summary, "recent_claims": claims}
+    # Calculate MoM comparison
+    from frappe.utils import today, add_months, add_days
+    curr_month_start = today()[:8] + "01"
+    prev_month_start = add_months(curr_month_start, -1)[:8] + "01"
+    prev_month_end = add_days(curr_month_start, -1)
+
+    curr_month_spend = frappe.db.get_value(
+        "Expense Claim",
+        {
+            "employee": employee,
+            "claim_date": (">=", curr_month_start),
+            "workflow_state": ("in", ["Approved", "Pending Approval"])
+        },
+        "SUM(total_claimed_amount)"
+    ) or 0.0
+
+    prev_month_spend = frappe.db.get_value(
+        "Expense Claim",
+        {
+            "employee": employee,
+            "claim_date": ["between", [prev_month_start, prev_month_end]],
+            "workflow_state": ("in", ["Approved", "Pending Approval"])
+        },
+        "SUM(total_claimed_amount)"
+    ) or 0.0
+
+    if prev_month_spend > 0:
+        mom_percent = round(((curr_month_spend - prev_month_spend) / prev_month_spend) * 100, 1)
+    else:
+        mom_percent = 100.0 if curr_month_spend > 0 else 0.0
+
+    return {
+        "summary": summary,
+        "recent_claims": claims,
+        "mom_percent": mom_percent,
+        "curr_month_spend": flt(curr_month_spend),
+        "prev_month_spend": flt(prev_month_spend)
+    }
 
 
 # ------------------------------------------------------------------

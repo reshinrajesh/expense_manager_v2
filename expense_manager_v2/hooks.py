@@ -89,9 +89,9 @@ app_include_js  = []
 # ------------------------------------------------------------------
 # Website CSS (public pages / login)
 # ------------------------------------------------------------------
-website_context = {
-    "include_style": "/assets/expense_manager_v2/css/bizaxl_theme.css"
-}
+web_include_css = [
+    "/assets/expense_manager_v2/css/bizaxl_theme.css"
+]
 
 # ------------------------------------------------------------------
 # Standard DocTypes used (from ERPNext) — no override needed

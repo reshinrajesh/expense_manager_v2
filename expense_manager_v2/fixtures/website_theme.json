@@ -3,6 +3,7 @@
     "doctype": "Website Theme",
     "name": "Bizaxl",
     "theme": "Bizaxl",
+    "module": "Expense Manager",
     "is_standard": 0,
     "custom_css": "/* Bizaxl design system applied via expense_manager_v2 app_include_css */"
   }
