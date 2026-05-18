@@ -1,0 +1,54 @@
+{
+  "name": "Expense Claim Item",
+  "module": "Expense Manager",
+  "doctype": "DocType",
+  "istable": 1,
+  "engine": "InnoDB",
+  "fields": [
+    {
+      "fieldname": "expense_type",
+      "label": "Expense Type",
+      "fieldtype": "Link",
+      "options": "Expense Type",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 2,
+      "search_index": 0
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text",
+      "in_list_view": 1,
+      "columns": 3
+    },
+    {
+      "fieldname": "amount",
+      "label": "Amount",
+      "fieldtype": "Currency",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 2
+    },
+    {
+      "fieldname": "mode_of_payment",
+      "label": "Mode of Payment",
+      "fieldtype": "Link",
+      "options": "Mode of Payment",
+      "in_list_view": 1,
+      "columns": 2
+    },
+    {
+      "fieldname": "receipt",
+      "label": "Receipt",
+      "fieldtype": "Attach",
+      "in_list_view": 1,
+      "columns": 2
+    }
+  ],
+  "permissions": [],
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}

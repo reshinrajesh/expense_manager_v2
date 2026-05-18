@@ -1,0 +1,2 @@
+include MANIFEST.in
+recursive-include expense_manager_v2 *.json *.js *.css *.html *.md *.png *.svg

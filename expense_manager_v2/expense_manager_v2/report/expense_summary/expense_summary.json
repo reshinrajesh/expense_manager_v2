@@ -1,0 +1,13 @@
+{
+  "name": "Expense Summary",
+  "doctype": "Report",
+  "report_name": "Expense Summary",
+  "ref_doctype": "Expense Claim",
+  "report_type": "Script Report",
+  "module": "Expense Manager",
+  "is_standard": "Yes",
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}

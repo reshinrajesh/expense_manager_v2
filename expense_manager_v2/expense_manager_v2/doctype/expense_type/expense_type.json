@@ -1,0 +1,53 @@
+{
+  "name": "Expense Type",
+  "module": "Expense Manager",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "is_submittable": 0,
+  "naming_rule": "By fieldname",
+  "autoname": "field:expense_type_name",
+  "fields": [
+    {
+      "fieldname": "expense_type_name",
+      "label": "Expense Type Name",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Check",
+      "default": "1",
+      "in_list_view": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1, "write": 1, "create": 1, "delete": 1
+    },
+    {
+      "role": "Expense Manager",
+      "read": 1, "write": 1, "create": 1
+    },
+    {
+      "role": "Expense Employee",
+      "read": 1
+    }
+  ],
+  "sort_field": "expense_type_name",
+  "sort_order": "ASC",
+  "track_changes": 0,
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}

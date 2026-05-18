@@ -1,0 +1,76 @@
+{
+  "name": "Expense Policy",
+  "module": "Expense Manager",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "naming_rule": "Expression",
+  "autoname": "EPOL-.####",
+  "fields": [
+    {
+      "fieldname": "expense_type",
+      "label": "Expense Type",
+      "fieldtype": "Link",
+      "options": "Expense Type",
+      "reqd": 1,
+      "in_list_view": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "max_amount_per_claim",
+      "label": "Max Amount Per Claim (₹)",
+      "fieldtype": "Currency",
+      "reqd": 1,
+      "in_list_view": 1,
+      "description": "Maximum allowed amount for a single line item of this type."
+    },
+    {
+      "fieldname": "col_break",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "max_amount_per_month",
+      "label": "Max Amount Per Month (₹)",
+      "fieldtype": "Currency",
+      "description": "Monthly cap across all claims for this expense type (0 = no limit)."
+    },
+    {
+      "fieldname": "applicable_roles",
+      "label": "Applicable Roles",
+      "fieldtype": "Small Text",
+      "description": "Comma-separated roles this policy applies to. Leave blank for all."
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Check",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "notes",
+      "label": "Policy Notes",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1, "write": 1, "create": 1, "delete": 1
+    },
+    {
+      "role": "Expense Manager",
+      "read": 1, "write": 1, "create": 1
+    },
+    {
+      "role": "Expense Employee",
+      "read": 1
+    }
+  ],
+  "sort_field": "expense_type",
+  "sort_order": "ASC",
+  "track_changes": 1,
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}

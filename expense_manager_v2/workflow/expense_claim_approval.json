@@ -1,0 +1,75 @@
+{
+  "name": "Expense Claim Approval",
+  "doctype": "Workflow",
+  "document_type": "Expense Claim",
+  "workflow_name": "Expense Claim Approval",
+  "is_active": 1,
+  "override_status": 0,
+  "send_email_alert": 0,
+  "states": [
+    {
+      "state": "Draft",
+      "doc_status": "0",
+      "allow_edit": "Expense Employee",
+      "style": "Primary"
+    },
+    {
+      "state": "Submitted",
+      "doc_status": "1",
+      "allow_edit": "Expense Manager",
+      "style": "Primary"
+    },
+    {
+      "state": "Pending Approval",
+      "doc_status": "1",
+      "allow_edit": "Expense Manager",
+      "style": "Warning"
+    },
+    {
+      "state": "Approved",
+      "doc_status": "1",
+      "allow_edit": "Expense Manager",
+      "style": "Success"
+    },
+    {
+      "state": "Rejected",
+      "doc_status": "1",
+      "allow_edit": "Expense Employee",
+      "style": "Danger"
+    }
+  ],
+  "transitions": [
+    {
+      "state": "Draft",
+      "action": "Submit",
+      "next_state": "Pending Approval",
+      "allowed": "Expense Employee",
+      "allow_self_approval": 1
+    },
+    {
+      "state": "Pending Approval",
+      "action": "Approve",
+      "next_state": "Approved",
+      "allowed": "Expense Manager",
+      "allow_self_approval": 0
+    },
+    {
+      "state": "Pending Approval",
+      "action": "Reject",
+      "next_state": "Rejected",
+      "allowed": "Expense Manager",
+      "allow_self_approval": 0
+    },
+    {
+      "state": "Rejected",
+      "action": "Resubmit",
+      "next_state": "Pending Approval",
+      "allowed": "Expense Employee",
+      "allow_self_approval": 1
+    }
+  ],
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}

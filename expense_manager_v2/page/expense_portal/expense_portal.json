@@ -1,0 +1,17 @@
+{
+  "name": "expense_portal",
+  "doctype": "Page",
+  "module": "Expense Manager",
+  "page_name": "expense-portal",
+  "title": "Expense Portal",
+  "standard": "Yes",
+  "roles": [
+    {"role": "Expense Employee"},
+    {"role": "Expense Manager"},
+    {"role": "System Manager"}
+  ],
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}

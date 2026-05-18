@@ -1,0 +1,729 @@
+/* =================================================================
+   BIZAXL THEME — Custom Frappe / ERPNext Desk & Website Theme
+   Applied via app_include_css in expense_manager_v2/hooks.py
+
+   Design System:
+     Navy Dark  #05133C  — primary text, nav backgrounds
+     Navy Base  #091526  — logo, sidebar deep bg
+     Mint Green #14F1B1  — primary CTAs, active indicators
+     Bright Blue #114EFF — links, accents
+     White       #FFFFFF — cards, content areas
+     Gray 100    #F4F4F5 — subtle backgrounds, borders
+     Gray 400    #71717B — secondary text
+     Font: DM Sans (Google Fonts)
+   ================================================================= */
+
+/* ---- Google Fonts ---- */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+/* ================================================================
+   1. FRAPPE CSS VARIABLE OVERRIDES
+   Targets :root and [data-theme="light"] as Frappe does
+   ================================================================ */
+:root,
+[data-theme="light"] {
+
+  /* --- Brand / Primary --- */
+  --primary:              #14F1B1;
+  --primary-color:        #14F1B1;
+  --brand-color:          #14F1B1;
+  --btn-primary:          #14F1B1;
+
+  /* --- Button Colors --- */
+  --btn-default-bg:       #F4F4F5;
+  --btn-default-hover-bg: #E4E4E7;
+  --btn-ghost-hover-bg:   rgba(20,241,177,.10);
+
+  /* --- Border / Primary --- */
+  --border-primary:       #05133C;
+  --border-color:         #E4E4E7;
+  --dark-border-color:    #D1D5DB;
+  --table-border-color:   #E4E4E7;
+
+  /* --- Background / Layout --- */
+  --bg-color:             #F4F4F5;
+  --fg-color:             #FFFFFF;
+  --subtle-accent:        #F8F9FA;
+  --subtle-fg:            #F4F4F5;
+  --card-bg:              #FFFFFF;
+  --modal-bg:             #FFFFFF;
+  --popover-bg:           #FFFFFF;
+  --toast-bg:             #FFFFFF;
+  --highlight-color:      rgba(20,241,177,.06);
+  --awesomebar-focus-bg:  #FFFFFF;
+  --awesomplete-hover-bg: #F4F4F5;
+
+  /* --- Navbar --- */
+  --navbar-bg:            #05133C;
+  --navbar-height:        52px;
+
+  /* --- Sidebar --- */
+  --sidebar-select-color: rgba(20,241,177,.12);
+
+  /* --- Text --- */
+  --text-color:           #05133C;
+  --text-muted:           #71717B;
+  --disabled-text-color:  #A1A1AA;
+
+  /* --- Control / Input --- */
+  --control-bg:           #F4F4F5;
+  --control-bg-on-gray:   #E4E4E7;
+  --input-disabled-bg:    #E4E4E7;
+  --disabled-control-bg:  #F4F4F5;
+
+  /* --- Checkbox --- */
+  --checkbox-color:       #05133C;
+  --checkbox-gradient:    linear-gradient(180deg, #14F1B1 -124.51%, #114EFF 100%);
+  --checkbox-focus-shadow:0 0 0 3px rgba(20,241,177,.25);
+
+  /* --- Switch --- */
+  --switch-bg:            #D1D5DB;
+
+  /* --- Scrollbar --- */
+  --scrollbar-thumb-color:#A1A1AA;
+  --scrollbar-track-color:#F4F4F5;
+
+  /* --- Shadow --- */
+  --shadow-inset:         inset 0px -1px 0px #E4E4E7;
+  --card-shadow:          0 1px 3px rgba(5,19,60,.08);
+
+  /* --- Progress Bar --- */
+  --progress-bar-bg:      #14F1B1;
+
+  /* --- Timeline / Badge --- */
+  --timeline-badge-color: #FFFFFF;
+  --timeline-badge-bg:    #05133C;
+
+  /* --- Date Picker --- */
+  --date-active-text:     #FFFFFF;
+  --date-active-bg:       #05133C;
+  --date-range-bg:        rgba(20,241,177,.10);
+
+  /* --- Alerts --- */
+  --alert-text-success:   #065F46;
+  --alert-bg-success:     #D1FAE5;
+
+  /* --- Code Block --- */
+  --code-block-bg:        #091526;
+  --code-block-text:      #14F1B1;
+
+  /* --- Focus --- */
+  --highlight-shadow:     1px 1px 10px rgba(20,241,177,.15), 0px 0px 4px rgba(17,78,255,.4);
+}
+
+/* Dark theme — navy-base palette */
+[data-theme="dark"] {
+  --bg-color:             #091526;
+  --fg-color:             #0D1F35;
+  --card-bg:              #0D1F35;
+  --modal-bg:             #0D1F35;
+  --subtle-fg:            #0A1828;
+  --subtle-accent:        #0A1828;
+  --text-color:           #E8EDF5;
+  --text-muted:           #8E98A8;
+  --border-color:         rgba(255,255,255,.09);
+  --dark-border-color:    rgba(255,255,255,.14);
+  --table-border-color:   rgba(255,255,255,.09);
+  --control-bg:           #132033;
+  --navbar-bg:            #030D24;
+  --sidebar-select-color: rgba(20,241,177,.14);
+  --highlight-color:      rgba(20,241,177,.05);
+  --scrollbar-thumb-color:#1E3550;
+  --scrollbar-track-color:#091526;
+  --input-disabled-bg:    #132033;
+  --disabled-control-bg:  #132033;
+}
+
+/* ================================================================
+   2. GLOBAL TYPOGRAPHY — DM Sans everywhere
+   ================================================================ */
+*,
+body,
+.frappe-app,
+.frappe-app * {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: 'DM Sans', sans-serif !important;
+  font-weight: 700;
+  color: #05133C;
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: #E8EDF5;
+}
+
+/* ================================================================
+   3. NAVBAR
+   ================================================================ */
+.navbar,
+.navbar-expand-lg,
+header.navbar {
+  background-color: #05133C !important;
+  border-bottom: 1px solid rgba(20,241,177,.12) !important;
+  min-height: 52px;
+}
+
+/* Brand / logo */
+.navbar-brand,
+.navbar-brand * {
+  color: #14F1B1 !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  letter-spacing: -0.02em;
+}
+
+/* Navbar icons and links */
+.navbar .nav-link,
+.navbar .navbar-nav .nav-link,
+.navbar .dropdown-toggle {
+  color: rgba(255,255,255,.75) !important;
+  font-weight: 500;
+  transition: color .2s ease;
+}
+.navbar .nav-link:hover,
+.navbar .dropdown-toggle:hover {
+  color: #14F1B1 !important;
+}
+
+/* Navbar icons (feather/SVG) */
+.navbar svg,
+.navbar .icon {
+  stroke: rgba(255,255,255,.7) !important;
+}
+.navbar svg:hover,
+.navbar .icon:hover {
+  stroke: #14F1B1 !important;
+}
+
+/* Awesomebar (search) */
+.awesomebar-container,
+.awesomebar {
+  background: rgba(255,255,255,.08) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 8px !important;
+  color: #FFFFFF !important;
+}
+.awesomebar::placeholder { color: rgba(255,255,255,.45) !important; }
+.awesomebar:focus {
+  background: rgba(255,255,255,.12) !important;
+  border-color: #14F1B1 !important;
+  box-shadow: 0 0 0 3px rgba(20,241,177,.2) !important;
+}
+
+/* Notification / help icons */
+.navbar .notifications-icon,
+.navbar .help-icon {
+  color: rgba(255,255,255,.7) !important;
+}
+
+/* ================================================================
+   4. SIDEBAR
+   ================================================================ */
+.layout-side-section,
+.desk-sidebar,
+.sidebar-wrapper,
+aside.sidebar {
+  background-color: #05133C !important;
+  border-right: 1px solid rgba(20,241,177,.1) !important;
+}
+
+/* Sidebar section headings */
+.sidebar-section .sidebar-label,
+.module-sidebar .sidebar-label,
+.sidebar-group .sidebar-group-label {
+  color: rgba(255,255,255,.45) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
+  padding: 12px 16px 4px !important;
+}
+
+/* Sidebar items */
+.sidebar-section .sidebar-item a,
+.sidebar-section .standard-sidebar-item a,
+.module-sidebar a,
+.desk-sidebar a {
+  color: rgba(255,255,255,.65) !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  transition: all .2s ease !important;
+  padding: 7px 12px !important;
+}
+.sidebar-section .sidebar-item a:hover,
+.sidebar-section .standard-sidebar-item a:hover,
+.module-sidebar a:hover {
+  background: rgba(255,255,255,.06) !important;
+  color: #FFFFFF !important;
+}
+.sidebar-section .sidebar-item.selected a,
+.sidebar-section .standard-sidebar-item.selected a,
+.sidebar-section .sidebar-item.active a,
+.sidebar-section .standard-sidebar-item.active a {
+  background: rgba(20,241,177,.12) !important;
+  color: #14F1B1 !important;
+  border-left: 3px solid #14F1B1 !important;
+  font-weight: 600 !important;
+}
+
+/* ================================================================
+   5. MODULE HOME PAGE — App Icons
+   ================================================================ */
+.modules-section .module-card,
+.home-widget-list .widget,
+.widget-control .widget {
+  border-radius: 12px !important;
+  border: 1px solid #E4E4E7 !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 1px 3px rgba(5,19,60,.07) !important;
+  transition: all .25s ease !important;
+}
+.modules-section .module-card:hover,
+.home-widget-list .widget:hover {
+  box-shadow: 0 8px 24px rgba(5,19,60,.12) !important;
+  transform: translateY(-2px) !important;
+  border-color: #14F1B1 !important;
+}
+
+.module-icon .icon {
+  background: linear-gradient(135deg, #14F1B1 0%, #114EFF 100%) !important;
+  border-radius: 10px !important;
+  padding: 6px !important;
+}
+.module-icon .icon svg { stroke: #FFFFFF !important; }
+
+/* Module title */
+.module-title {
+  font-weight: 700 !important;
+  color: #05133C !important;
+}
+
+/* ================================================================
+   6. PRIMARY BUTTONS
+   ================================================================ */
+.btn-primary,
+.btn.btn-primary {
+  background: #14F1B1 !important;
+  color: #05133C !important;
+  border-color: #14F1B1 !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  font-family: 'DM Sans', sans-serif !important;
+  transition: all .2s ease !important;
+  box-shadow: none !important;
+}
+.btn-primary:hover,
+.btn.btn-primary:hover {
+  background: #0FD89E !important;
+  border-color: #0FD89E !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px rgba(20,241,177,.35) !important;
+}
+.btn-primary:active,
+.btn.btn-primary:active {
+  background: #0CC48D !important;
+  transform: translateY(0) !important;
+}
+
+/* Secondary buttons */
+.btn-default,
+.btn.btn-default,
+.btn-secondary,
+.btn.btn-secondary {
+  background: #FFFFFF !important;
+  color: #05133C !important;
+  border: 1.5px solid rgba(5,19,60,.3) !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  transition: all .2s ease !important;
+}
+.btn-default:hover,
+.btn.btn-default:hover {
+  background: #F4F4F5 !important;
+  border-color: #05133C !important;
+}
+
+/* Danger button */
+.btn-danger,
+.btn.btn-danger {
+  background: #EF4444 !important;
+  border-color: #EF4444 !important;
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+}
+.btn-danger:hover { background: #DC2626 !important; border-color: #DC2626 !important; }
+
+/* Ghost / link buttons */
+.btn-link { color: #114EFF !important; font-weight: 600 !important; }
+.btn-link:hover { color: #0A35CC !important; text-decoration: underline; }
+
+/* ================================================================
+   7. FORM / CARD AREA
+   ================================================================ */
+.form-page,
+.page-wrapper .layout-main,
+.frappe-card,
+.card {
+  background: #FFFFFF !important;
+  border-radius: 12px !important;
+  border: 1px solid #E4E4E7 !important;
+  box-shadow: 0 1px 3px rgba(5,19,60,.06) !important;
+}
+
+/* Form section header */
+.form-section .section-head,
+.section-head {
+  font-weight: 700 !important;
+  color: #05133C !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* Form labels */
+.control-label,
+label.control-label,
+.frappe-control .control-label {
+  font-weight: 600 !important;
+  color: #05133C !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+/* Form inputs */
+.form-control,
+.frappe-control input,
+.frappe-control select,
+.frappe-control textarea {
+  border: 1px solid #E4E4E7 !important;
+  border-radius: 8px !important;
+  background: #F4F4F5 !important;
+  color: #05133C !important;
+  font-family: 'DM Sans', sans-serif !important;
+  transition: border-color .2s ease, box-shadow .2s ease !important;
+}
+.form-control:focus,
+.frappe-control input:focus,
+.frappe-control select:focus,
+.frappe-control textarea:focus {
+  border-color: #114EFF !important;
+  box-shadow: 0 0 0 3px rgba(17,78,255,.12) !important;
+  background: #FFFFFF !important;
+}
+
+/* ================================================================
+   8. PAGE HEADER
+   ================================================================ */
+.page-head,
+.page-header {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E4E4E7 !important;
+}
+
+.page-title .title-text,
+.page-title h3 {
+  font-weight: 700 !important;
+  color: #05133C !important;
+  font-size: 20px !important;
+}
+
+/* Breadcrumb */
+.breadcrumb-container .breadcrumb-item a,
+.page-head .breadcrumb a {
+  color: #114EFF !important;
+  font-weight: 500 !important;
+}
+.breadcrumb-container .breadcrumb-item.active {
+  color: #71717B !important;
+}
+
+/* ================================================================
+   9. LIST VIEW
+   ================================================================ */
+.list-row,
+.result .list-item {
+  border-bottom: 1px solid #F4F4F5 !important;
+  transition: background .15s ease !important;
+}
+.list-row:hover,
+.result .list-item:hover {
+  background: rgba(20,241,177,.04) !important;
+}
+
+.list-row-head {
+  background: #F8F8F9 !important;
+  border-bottom: 2px solid #E4E4E7 !important;
+  font-weight: 700 !important;
+  color: #05133C !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* Subject link in list */
+.list-subject .level-item a {
+  color: #05133C !important;
+  font-weight: 600 !important;
+}
+.list-subject .level-item a:hover { color: #114EFF !important; }
+
+/* ================================================================
+   10. INDICATORS / STATUS BADGES
+   ================================================================ */
+.indicator-pill.green,
+.indicator.green::before,
+.badge.green {
+  background: rgba(20,241,177,.15) !important;
+  color: #065F46 !important;
+}
+.indicator-pill.blue,
+.indicator.blue::before,
+.badge.blue {
+  background: rgba(17,78,255,.12) !important;
+  color: #1D4ED8 !important;
+}
+.indicator-pill.orange,
+.indicator.orange::before {
+  background: rgba(245,158,11,.15) !important;
+  color: #92400E !important;
+}
+.indicator-pill.red,
+.indicator.red::before,
+.badge.red {
+  background: rgba(239,68,68,.12) !important;
+  color: #7F1D1D !important;
+}
+.indicator-pill.grey,
+.indicator-pill.gray,
+.indicator.grey::before {
+  background: rgba(113,113,123,.1) !important;
+  color: #71717B !important;
+}
+
+/* Docstatus indicators */
+.indicator-pill.draft { background: rgba(113,113,123,.1) !important; color: #71717B !important; }
+.indicator-pill.submitted { background: rgba(17,78,255,.12) !important; color: #1D4ED8 !important; }
+.indicator-pill.cancelled { background: rgba(239,68,68,.12) !important; color: #7F1D1D !important; }
+
+/* ================================================================
+   11. TABS
+   ================================================================ */
+.nav-tabs .nav-link {
+  color: #71717B !important;
+  font-weight: 600 !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 10px 16px !important;
+  border-radius: 0 !important;
+  transition: color .2s ease, border-color .2s ease !important;
+}
+.nav-tabs .nav-link:hover { color: #05133C !important; border-bottom-color: #E4E4E7 !important; }
+.nav-tabs .nav-link.active {
+  color: #05133C !important;
+  border-bottom-color: #14F1B1 !important;
+  background: transparent !important;
+  font-weight: 700 !important;
+}
+
+/* ================================================================
+   12. MODALS / DIALOGS
+   ================================================================ */
+.modal-header {
+  background: #05133C !important;
+  border-radius: 12px 12px 0 0 !important;
+  border-bottom: none !important;
+  padding: 20px 24px !important;
+}
+.modal-title {
+  color: #14F1B1 !important;
+  font-weight: 700 !important;
+  font-size: 17px !important;
+}
+.modal-header .btn-close,
+.modal-header .close {
+  color: rgba(255,255,255,.7) !important;
+  opacity: 1 !important;
+}
+.modal-content {
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(5,19,60,.25) !important;
+}
+.modal-footer {
+  border-top: 1px solid #E4E4E7 !important;
+  padding: 16px 24px !important;
+}
+
+/* ================================================================
+   13. DROPDOWN MENUS
+   ================================================================ */
+.dropdown-menu {
+  border-radius: 10px !important;
+  border: 1px solid #E4E4E7 !important;
+  box-shadow: 0 8px 24px rgba(5,19,60,.12) !important;
+  padding: 6px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+.dropdown-item {
+  border-radius: 7px !important;
+  font-weight: 500 !important;
+  color: #05133C !important;
+  padding: 8px 12px !important;
+  transition: background .15s ease !important;
+}
+.dropdown-item:hover, .dropdown-item:focus {
+  background: #F4F4F5 !important;
+  color: #05133C !important;
+}
+.dropdown-item.active {
+  background: rgba(20,241,177,.12) !important;
+  color: #05133C !important;
+}
+
+/* ================================================================
+   14. LINKS
+   ================================================================ */
+a, .btn-link {
+  color: #114EFF !important;
+  transition: color .15s ease !important;
+}
+a:hover { color: #0A35CC !important; }
+
+/* ================================================================
+   15. TOASTS / ALERTS
+   ================================================================ */
+.toast {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 8px 24px rgba(5,19,60,.15) !important;
+}
+.toast .toast-header {
+  background: #05133C !important;
+  color: #14F1B1 !important;
+  border-radius: 12px 12px 0 0 !important;
+  font-weight: 700 !important;
+}
+
+/* ================================================================
+   16. SCROLL BARS
+   ================================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F4F4F5; }
+::-webkit-scrollbar-thumb { background: #A1A1AA; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #71717B; }
+
+/* ================================================================
+   17. WORKSPACE / HOME
+   ================================================================ */
+.workspace-container {
+  background: #F4F4F5 !important;
+}
+
+.widget-head .widget-title {
+  font-weight: 700 !important;
+  color: #05133C !important;
+  font-size: 14px !important;
+}
+
+/* Shortcut cards */
+.shortcut-widget-box {
+  border-radius: 12px !important;
+  border: 1px solid #E4E4E7 !important;
+  background: #FFFFFF !important;
+  transition: all .2s ease !important;
+}
+.shortcut-widget-box:hover {
+  border-color: #14F1B1 !important;
+  box-shadow: 0 4px 16px rgba(20,241,177,.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ================================================================
+   18. CHARTS (Frappe Charts)
+   ================================================================ */
+.frappe-chart .graph-svg-tip {
+  background: #05133C !important;
+  color: #14F1B1 !important;
+  border-radius: 8px !important;
+}
+.frappe-chart .y-axis text,
+.frappe-chart .x-axis text {
+  fill: #71717B !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ================================================================
+   19. LOGIN PAGE
+   ================================================================ */
+.login-content,
+.for-login {
+  background: linear-gradient(135deg, #05133C 0%, #091526 60%, #0A1F3D 100%) !important;
+  min-height: 100vh;
+}
+.login-form-wrapper,
+.page-card {
+  background: #FFFFFF !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 64px rgba(5,19,60,.35) !important;
+  border: 1px solid rgba(20,241,177,.12) !important;
+}
+.login-content .for-login .sign-up-message a,
+.login-content a {
+  color: #14F1B1 !important;
+}
+
+/* Login brand mark */
+.login-content .navbar-brand {
+  font-size: 24px !important;
+  color: #14F1B1 !important;
+}
+
+/* ================================================================
+   20. BRAND GRADIENT ACCENT BAR
+   (Injected at top of page for brand identity)
+   ================================================================ */
+body::before {
+  content: '';
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #14F1B1 0%, #114EFF 50%, #091526 100%);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ================================================================
+   21. REPORT BUILDER
+   ================================================================ */
+.dt-cell--header .dt-cell__content {
+  background: #F8F8F9 !important;
+  color: #05133C !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.dt-row:hover .dt-cell { background: rgba(20,241,177,.04) !important; }
+
+/* ================================================================
+   22. PRINT AREA
+   ================================================================ */
+@media print {
+  .navbar, .sidebar-wrapper, .page-head .title-area + * { display: none; }
+  body::before { display: none; }
+  .page-wrapper { margin: 0 !important; }
+}

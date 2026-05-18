@@ -1,0 +1,135 @@
+{
+  "name": "Expense Claim",
+  "module": "Expense Manager",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "is_submittable": 1,
+  "naming_rule": "Expression",
+  "autoname": "EXP-.YYYY.-.#####",
+  "title_field": "employee_name",
+  "search_fields": "employee,employee_name,workflow_state",
+  "fields": [
+    {
+      "fieldname": "section_header",
+      "label": "Claim Details",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Link",
+      "options": "Employee",
+      "reqd": 1,
+      "in_list_view": 1,
+      "search_index": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data",
+      "fetch_from": "employee.employee_name",
+      "fetch_if_empty": 1,
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "col_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "department",
+      "label": "Department",
+      "fieldtype": "Link",
+      "options": "Department",
+      "fetch_from": "employee.department",
+      "fetch_if_empty": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "claim_date",
+      "label": "Claim Date",
+      "fieldtype": "Date",
+      "reqd": 1,
+      "default": "Today",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "cost_center",
+      "label": "Cost Center",
+      "fieldtype": "Link",
+      "options": "Cost Center"
+    },
+    {
+      "fieldname": "section_items",
+      "label": "Expense Line Items",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "expenses",
+      "label": "Expenses",
+      "fieldtype": "Table",
+      "options": "Expense Claim Item",
+      "reqd": 1
+    },
+    {
+      "fieldname": "section_totals",
+      "label": "Totals",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "total_claimed_amount",
+      "label": "Total Claimed Amount",
+      "fieldtype": "Currency",
+      "read_only": 1,
+      "in_list_view": 1,
+      "bold": 1
+    },
+    {
+      "fieldname": "section_workflow",
+      "label": "Workflow",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "workflow_state",
+      "label": "Status",
+      "fieldtype": "Data",
+      "read_only": 1,
+      "in_list_view": 1,
+      "bold": 1,
+      "allow_on_submit": 1
+    },
+    {
+      "fieldname": "remarks",
+      "label": "Manager Remarks",
+      "fieldtype": "Small Text",
+      "read_only": 0,
+      "allow_on_submit": 1,
+      "description": "Filled by manager on approval or rejection."
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1, "write": 1, "create": 1, "delete": 1,
+      "submit": 1, "cancel": 1, "amend": 1, "report": 1
+    },
+    {
+      "role": "Expense Manager",
+      "read": 1, "write": 1, "submit": 1,
+      "cancel": 1, "report": 1, "if_owner": 0
+    },
+    {
+      "role": "Expense Employee",
+      "read": 1, "write": 1, "create": 1,
+      "submit": 1, "if_owner": 1
+    }
+  ],
+  "sort_field": "claim_date",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "modified": "2026-05-18 00:00:00.000000",
+  "modified_by": "Administrator",
+  "owner": "Administrator",
+  "creation": "2026-05-18 00:00:00.000000"
+}
