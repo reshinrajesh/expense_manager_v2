@@ -87,7 +87,7 @@ def get_claim_detail(claim_name):
     doc = frappe.get_doc("Expense Claim", claim_name)
 
     # Enforce row-level access
-    from expense_manager_v2.expense_manager_v2.doctype.expense_claim.expense_claim import has_permission
+    from expense_manager_v2.expense_manager.doctype.expense_claim.expense_claim import has_permission
     if not has_permission(doc):
         frappe.throw(_("Not permitted"), frappe.PermissionError)
 

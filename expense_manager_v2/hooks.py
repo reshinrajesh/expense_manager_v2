@@ -47,8 +47,8 @@ fixtures = [
 # ------------------------------------------------------------------
 doc_events = {
     "Expense Claim": {
-        "on_submit":             "expense_manager_v2.expense_manager_v2.doctype.expense_claim.expense_claim.on_submit",
-        "on_update_after_submit":"expense_manager_v2.expense_manager_v2.doctype.expense_claim.expense_claim.on_update_after_submit",
+        "on_submit":             "expense_manager_v2.expense_manager.doctype.expense_claim.expense_claim.on_submit",
+        "on_update_after_submit":"expense_manager_v2.expense_manager.doctype.expense_claim.expense_claim.on_update_after_submit",
     }
 }
 
@@ -61,7 +61,7 @@ notification_config = "expense_manager_v2.notifications.get_notification_config"
 # Page permission: only Expense Employee + Manager roles see the SPA
 # ------------------------------------------------------------------
 has_permission = {
-    "Expense Claim": "expense_manager_v2.expense_manager_v2.doctype.expense_claim.expense_claim.has_permission"
+    "Expense Claim": "expense_manager_v2.expense_manager.doctype.expense_claim.expense_claim.has_permission"
 }
 
 # ------------------------------------------------------------------
