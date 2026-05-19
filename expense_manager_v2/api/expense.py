@@ -168,6 +168,8 @@ def create_expense_claim(data):
 def submit_expense_claim(claim_name):
     doc = frappe.get_doc("Expense Claim", claim_name)
     _assert_own_claim(doc)
+    doc.workflow_state = "Pending Approval"
+    doc.save(ignore_permissions=True)
     doc.submit()
     return {"message": f"{claim_name} submitted for approval."}
 
