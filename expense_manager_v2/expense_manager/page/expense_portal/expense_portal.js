@@ -972,14 +972,38 @@ class ExpensePortal {
         ).join('')
       : '<p style="color:var(--gray-400);font-size:13px;">No data yet.</p>';
 
+    const policyIcons = {
+      'Travel': '✈️',
+      'Meals': '🍔',
+      'Equipment': '💻',
+      'Marketing': '📢',
+      'Office': '🏢',
+      'Entertainment': '🎬'
+    };
+
     const policyRows = policies.length
-      ? policies.map(p =>
-          '<div class="ep-policy-row">' +
-          '<div class="ep-policy-name">' + p.expense_type + '</div>' +
-          '<div class="ep-policy-cap"><span>Per Claim: <strong>Rs. ' + this._fmt(p.max_amount_per_claim) + '</strong></span>' +
-          (p.max_amount_per_month ? '<span>Per Month: <strong>Rs. ' + this._fmt(p.max_amount_per_month) + '</strong></span>' : '') +
-          '</div></div>'
-        ).join('')
+      ? '<div class="ep-policy-grid">' +
+        policies.map(p => {
+          const icon = policyIcons[p.expense_type] || '📋';
+          return '<div class="ep-policy-card">' +
+            '<div class="ep-policy-header">' +
+              '<div class="ep-policy-icon-box">' + icon + '</div>' +
+              '<div class="ep-policy-title">' + p.expense_type + '</div>' +
+            '</div>' +
+            '<div class="ep-policy-limits">' +
+              '<div class="ep-policy-limit-item">' +
+                '<span class="ep-policy-limit-label">Per Claim</span>' +
+                '<span class="ep-policy-limit-val">Rs. ' + this._fmt(p.max_amount_per_claim) + '</span>' +
+              '</div>' +
+              (p.max_amount_per_month ? 
+              '<div class="ep-policy-limit-item">' +
+                '<span class="ep-policy-limit-label">Per Month</span>' +
+                '<span class="ep-policy-limit-val">Rs. ' + this._fmt(p.max_amount_per_month) + '</span>' +
+              '</div>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '</div>'
       : '<p style="color:var(--gray-400);font-size:13px;">No policies configured yet.</p>';
 
     document.getElementById('ep-content').innerHTML = `
@@ -1010,10 +1034,34 @@ class ExpensePortal {
       
       <div id="ep-analytics-print-area">
         <div class="ep-charts-grid">
-          <div class="ep-chart-card"><div class="ep-chart-title">Spend by Category</div>${byTypeBars}</div>
-          <div class="ep-chart-card"><div class="ep-chart-title">6-Month Trend</div><div class="ep-trend-bars">${trendBars}</div></div>
+          <div class="ep-chart-card">
+            <div class="ep-chart-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--bright-blue);flex-shrink:0;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+              Spend by Category
+            </div>
+            ${byTypeBars}
+          </div>
+          <div class="ep-chart-card">
+            <div class="ep-chart-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--mint-green);flex-shrink:0;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+              </svg>
+              6-Month Trend
+            </div>
+            <div class="ep-trend-bars">${trendBars}</div>
+          </div>
         </div>
-        <div class="ep-card"><div class="ep-section-title">Expense Policies</div>${policyRows}</div>
+        <div class="ep-card">
+          <div class="ep-section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:var(--bright-blue);flex-shrink:0;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            Expense Policies
+          </div>
+          ${policyRows}
+        </div>
       </div>`;
 
     document.getElementById('btn-export-csv').addEventListener('click', async () => {
