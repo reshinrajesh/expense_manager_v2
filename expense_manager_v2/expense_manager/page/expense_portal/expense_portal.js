@@ -1148,7 +1148,7 @@ class ExpensePortal {
       ? '<button class="btn btn-secondary btn-sm" id="btn-amend-claim">Amend &amp; Resubmit</button>'
       : '';
 
-    const draftBtns = (doc.workflow_state === 'Draft')
+    const draftBtns = (!doc.workflow_state || doc.workflow_state === 'Draft')
       ? '<button class="btn btn-primary btn-sm" id="btn-submit-draft">Send for Approval</button>' +
         '<button class="btn btn-danger btn-sm" id="btn-decline-draft">Decline</button>'
       : '';
