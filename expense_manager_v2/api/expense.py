@@ -362,8 +362,8 @@ def get_analytics_data():
     """, as_dict=True)
 
     monthly = frappe.db.sql(f"""
-        SELECT DATE_FORMAT(ec.claim_date,'%%b %%Y') AS month_label,
-               DATE_FORMAT(ec.claim_date,'%%Y-%%m') AS month_sort,
+        SELECT DATE_FORMAT(ec.claim_date,'%b %Y') AS month_label,
+               DATE_FORMAT(ec.claim_date,'%Y-%m') AS month_sort,
                SUM(ec.total_claimed_amount)          AS total
         FROM `tabExpense Claim` ec
         WHERE ec.claim_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
