@@ -51,8 +51,7 @@ class ExpensePortal {
     try {
       const boot = frappe.boot;
       this.employee  = boot.expense_employee || {};
-      this.isManager = (boot.expense_roles || []).includes('Expense Manager') ||
-                       (boot.expense_roles || []).includes('System Manager');
+      this.isManager = (boot.expense_roles || []).includes('Expense Manager');
     } catch (e) {
       console.warn('ExpensePortal: boot data unavailable, fetchingâ€¦');
     }
