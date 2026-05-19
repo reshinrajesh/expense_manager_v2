@@ -1,7 +1,7 @@
 /* ============================================================
    EXPENSE PORTAL SPA â€” Part 1: Core, Bootstrap, Dashboard
    ============================================================ */
-frappe.pages['expense-portal'].on_page_load = function (wrapper) {
+frappe.pages['expense_portal'].on_page_load = function (wrapper) {
   const page = frappe.ui.make_app_page({
     parent: wrapper,
     title: 'Expense Portal',
@@ -13,10 +13,12 @@ frappe.pages['expense-portal'].on_page_load = function (wrapper) {
     '/assets/expense_manager_v2/css/expense_portal.css',
   ]);
 
-  // Mount the HTML shell
-  $(wrapper).find('.page-content').html(
-    `<div id="ep-root"></div>`
-  );
+  // Mount the HTML shell if not already loaded by Frappe
+  if ($(wrapper).find('.ep-shell').length === 0) {
+    $(wrapper).find('.page-content').html(
+      frappe.templates['expense_portal'] || ''
+    );
+  }
 
   // Boot the SPA
   new ExpensePortal(wrapper);
@@ -55,15 +57,19 @@ class ExpensePortal {
       console.warn('ExpensePortal: boot data unavailable, fetchingâ€¦');
     }
 
-    // Preload dropdowns
-    const [types, modes, ccs] = await Promise.all([
+    // Preload dropdowns, policies, and current month spends
+    const [types, modes, ccs, analytics, monthSpends] = await Promise.all([
       this._api('expense_manager_v2.api.expense.get_expense_types'),
       this._api('expense_manager_v2.api.expense.get_modes_of_payment'),
       this._api('expense_manager_v2.api.expense.get_cost_centers'),
+      this._api('expense_manager_v2.api.expense.get_analytics_data'),
+      this._api('expense_manager_v2.api.expense.get_current_month_spends'),
     ]);
     this.dropdowns.expenseTypes  = types  || [];
     this.dropdowns.modes         = modes  || [];
     this.dropdowns.costCenters   = ccs    || [];
+    this.policies                = analytics ? (analytics.policies || []) : [];
+    this.currentMonthSpends      = monthSpends || {};
   }
 
   /* ---------- Shell ---------- */
@@ -135,6 +141,25 @@ class ExpensePortal {
     const s    = data.summary || {};
     const recent = data.recent_claims || [];
 
+    let momHtml = '';
+    if (data.mom_percent !== undefined) {
+      const pct = Math.abs(data.mom_percent).toFixed(1);
+      const isUp = data.mom_percent > 0;
+      const isDown = data.mom_percent < 0;
+      const arrow = isUp ? '▲' : isDown ? '▼' : '•';
+      const badgeColor = isUp ? 'var(--danger)' : isDown ? 'var(--success)' : 'var(--gray-400)';
+      const badgeBg = isUp ? 'rgba(239,68,68,.12)' : isDown ? 'rgba(0,201,80,.12)' : 'rgba(113,113,123,.12)';
+      const labelText = isUp ? 'increase MoM' : isDown ? 'decrease MoM' : 'MoM';
+      
+      momHtml = `
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:600;">
+          <span style="background:${badgeBg};color:${badgeColor};padding:2px 8px;border-radius:var(--radius-full);display:inline-flex;align-items:center;gap:3px;">
+            <span>${arrow}</span><span>${pct}%</span>
+          </span>
+          <span style="color:var(--gray-400);font-weight:500;">${labelText}</span>
+        </div>`;
+    }
+
     const html = `
       <!-- Stat Cards -->
       <div class="ep-stats-grid" id="ep-stats-grid">
@@ -150,15 +175,15 @@ class ExpensePortal {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>`)}
-        ${this._statCard('Total Claimed', 'â‚¹ ' + this._fmt(s['total_amount'] || 0), '#114EFF', `
+        ${this._statCard('Total Claimed', '₹ ' + this._fmt(s['total_amount'] || 0), '#114EFF', `
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4 1.343 4 3-1.79 3-4 3m0-15v1m0 14v1"/>
-          </svg>`)}
+          </svg>`, momHtml)}
       </div>
-
+ 
       <!-- Brand gradient divider -->
       <div style="height:3px;background:var(--brand-gradient);border-radius:99px;margin-bottom:24px;"></div>
-
+ 
       <!-- Recent Claims -->
       <div class="ep-card">
         <div class="ep-section-title">
@@ -183,8 +208,8 @@ class ExpensePortal {
               ${recent.map(c => `
                 <tr>
                   <td><strong>${c.name}</strong></td>
-                  <td>${c.claim_date || 'â€”'}</td>
-                  <td>â‚¹ ${this._fmt(c.total_claimed_amount)}</td>
+                  <td>${c.claim_date || '—'}</td>
+                  <td>₹ ${this._fmt(c.total_claimed_amount)}</td>
                   <td>${this._badge(c.workflow_state)}</td>
                   <td>
                     <button class="btn btn-tertiary btn-sm ep-view-claim"
@@ -195,21 +220,22 @@ class ExpensePortal {
           </table>
         </div>` : this._emptyState('No claims yet. Create your first expense!')}
       </div>`;
-
+ 
     document.getElementById('ep-content').innerHTML = html;
-
+ 
     // Bind view buttons
     document.querySelectorAll('.ep-view-claim').forEach(btn => {
       btn.addEventListener('click', () => this._renderClaimDetail(btn.dataset.name));
     });
   }
-
-  _statCard(label, value, color, iconSvg) {
+ 
+  _statCard(label, value, color, iconSvg, extraHtml = '') {
     return `
       <div class="ep-stat-card">
         <div class="ep-stat-icon" style="background:${color}18;">${iconSvg.replace('stroke="currentColor"', `stroke="${color}"`)}</div>
         <div class="ep-stat-label">${label}</div>
         <div class="ep-stat-value" style="color:${color};">${value}</div>
+        ${extraHtml}
       </div>`;
   }
 
@@ -221,7 +247,7 @@ class ExpensePortal {
       .map(t => `<option value="${t.name}">${t.expense_type_name}</option>`).join('');
     const modeOpts = this.dropdowns.modes
       .map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-    const ccOpts   = `<option value="">â€” None â€”</option>` + this.dropdowns.costCenters
+    const ccOpts   = `<option value="">— None —</option>` + this.dropdowns.costCenters
       .map(c => `<option value="${c.name}">${c.cost_center_name}</option>`).join('');
 
     const html = `
@@ -265,7 +291,7 @@ class ExpensePortal {
         <hr class="ep-divider">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div style="font-size:15px;font-weight:700;color:var(--navy-dark);">
-            Total: â‚¹ <span id="nc-total">0.00</span>
+            Total: ₹ <span id="nc-total">0.00</span>
           </div>
           <div style="display:flex;gap:10px;">
             <button class="btn btn-tertiary" id="btn-save-draft">Save Draft</button>
@@ -300,14 +326,25 @@ class ExpensePortal {
   _newLineItemRow(typeOpts, modeOpts, idx) {
     return `
       <tr class="ep-line-row" id="ep-line-row-${idx}">
-        <td><select class="li-type" required><option value="">Selectâ€¦</option>${typeOpts}</select></td>
+        <td><select class="li-type" required><option value="">Select…</option>${typeOpts}</select></td>
         <td><input type="text" class="li-desc" placeholder="Description"></td>
         <td><input type="number" class="li-amount" min="0" step="0.01" placeholder="0.00"></td>
-        <td><select class="li-mode"><option value="">â€” None â€”</option>${modeOpts}</select></td>
-        <td><input type="text" class="li-receipt" placeholder="Attachment URL"></td>
+        <td><select class="li-mode"><option value="">— None —</option>${modeOpts}</select></td>
+        <td>
+          <div class="ep-upload-btn-wrap" style="display:flex;align-items:center;gap:6px;">
+            <button class="btn btn-tertiary btn-sm ep-row-upload-btn" type="button" style="padding:4px 8px;font-size:11px;min-width:unset;display:inline-flex;align-items:center;gap:3px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              Upload
+            </button>
+            <span class="ep-row-upload-status" style="font-size:11px;color:var(--gray-400);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">No file</span>
+            <input type="hidden" class="li-receipt">
+          </div>
+        </td>
         <td>
           <button class="btn btn-danger btn-sm ep-remove-row" style="padding:6px 8px;min-width:unset;"
-                  title="Remove row">âœ•</button>
+                  title="Remove row">✖</button>
         </td>
       </tr>`;
   }
@@ -321,10 +358,151 @@ class ExpensePortal {
         this._recalcTotal();
       };
     });
-    // Recalc on amount change
-    document.querySelectorAll('.li-amount').forEach(inp => {
-      inp.oninput = () => this._recalcTotal();
+
+    // Add input and change events for policy checking & file uploads
+    document.querySelectorAll('.ep-line-row').forEach(row => {
+      const typeSelect = row.querySelector('.li-type');
+      const amountInput = row.querySelector('.li-amount');
+      
+      const handler = () => {
+        this._recalcTotal();
+        this._checkRowPolicy(row);
+      };
+      
+      typeSelect.onchange = handler;
+      amountInput.oninput = handler;
+
+      // Handle direct receipt file upload
+      const uploadBtn = row.querySelector('.ep-row-upload-btn');
+      const statusSpan = row.querySelector('.ep-row-upload-status');
+      const hiddenInput = row.querySelector('.li-receipt');
+
+      if (uploadBtn && !uploadBtn.dataset.bound) {
+        uploadBtn.dataset.bound = "true";
+        uploadBtn.onclick = () => {
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'image/*,application/pdf';
+          fileInput.onchange = async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            statusSpan.style.color = 'var(--gray-400)';
+            statusSpan.textContent = 'Uploading...';
+            uploadBtn.disabled = true;
+
+            try {
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('is_private', 0);
+              formData.append('folder', 'Home');
+
+              const response = await fetch('/api/method/upload_file', {
+                method: 'POST',
+                headers: {
+                  'X-Frappe-CSRF-Token': frappe.csrf_token || ''
+                },
+                body: formData
+              });
+
+              if (!response.ok) throw new Error('Upload failed');
+              const resData = await response.json();
+              const fileUrl = resData.message?.file_url;
+
+              if (fileUrl) {
+                hiddenInput.value = fileUrl;
+                statusSpan.style.color = 'var(--success)';
+                statusSpan.innerHTML = `<span style="font-weight:600;">✓</span> ${file.name}`;
+                
+                // Add a dynamic View button or link
+                let viewBtn = row.querySelector('.ep-row-view-file-btn');
+                if (!viewBtn) {
+                  viewBtn = document.createElement('a');
+                  viewBtn.className = 'btn btn-tertiary btn-sm ep-row-view-file-btn';
+                  viewBtn.target = '_blank';
+                  viewBtn.style.padding = '4px 6px';
+                  viewBtn.style.fontSize = '10px';
+                  viewBtn.style.minWidth = 'unset';
+                  viewBtn.style.marginLeft = '4px';
+                  viewBtn.textContent = 'View';
+                  uploadBtn.parentElement.appendChild(viewBtn);
+                }
+                viewBtn.href = fileUrl;
+              } else {
+                throw new Error('No URL returned');
+              }
+            } catch (e) {
+              console.error(e);
+              statusSpan.style.color = 'var(--danger)';
+              statusSpan.textContent = 'Failed';
+            } finally {
+              uploadBtn.disabled = false;
+            }
+          };
+          fileInput.click();
+        };
+      }
     });
+  }
+
+  _checkRowPolicy(row) {
+    const type = row.querySelector('.li-type').value;
+    const amountVal = parseFloat(row.querySelector('.li-amount').value || 0);
+    const amountInput = row.querySelector('.li-amount');
+    
+    // Find matching policy
+    const policy = (this.policies || []).find(p => p.expense_type === type);
+    
+    // Remove any existing warning label under or inside the cell
+    const cell = amountInput.parentElement;
+    const existing = cell.querySelector('.ep-policy-warning');
+    if (existing) existing.remove();
+    amountInput.style.borderColor = '';
+    
+    if (policy && amountVal > 0) {
+      const claimCap = parseFloat(policy.max_amount_per_claim || 0);
+      const monthCap = parseFloat(policy.max_amount_per_month || 0);
+      
+      // 1. Check Per-Claim Cap
+      if (claimCap > 0 && amountVal > claimCap) {
+        amountInput.style.borderColor = 'var(--danger)';
+        const warning = document.createElement('div');
+        warning.className = 'ep-policy-warning';
+        warning.style.color = 'var(--danger)';
+        warning.style.fontSize = '10px';
+        warning.style.fontWeight = '600';
+        warning.style.marginTop = '4px';
+        warning.innerHTML = `⚠️ Exceeds per-claim cap of ₹${this._fmt(claimCap)}`;
+        cell.appendChild(warning);
+        return;
+      }
+      
+      // 2. Check Monthly Cap
+      if (monthCap > 0) {
+        // Sum up all rows in this form with the same type
+        let formTotalForType = 0;
+        document.querySelectorAll('.ep-line-row').forEach(r => {
+          if (r.querySelector('.li-type').value === type) {
+            formTotalForType += parseFloat(r.querySelector('.li-amount').value || 0);
+          }
+        });
+        
+        const spentThisMonth = parseFloat(this.currentMonthSpends[type] || 0);
+        const projectedTotal = spentThisMonth + formTotalForType;
+        
+        if (projectedTotal > monthCap) {
+          amountInput.style.borderColor = 'var(--danger)';
+          const warning = document.createElement('div');
+          warning.className = 'ep-policy-warning';
+          warning.style.color = 'var(--danger)';
+          warning.style.fontSize = '10px';
+          warning.style.fontWeight = '600';
+          warning.style.marginTop = '4px';
+          warning.innerHTML = `⚠️ Exceeds monthly cap of ₹${this._fmt(monthCap)} (Spent: ₹${this._fmt(spentThisMonth)})`;
+          cell.appendChild(warning);
+        }
+      }
+    }
   }
 
   _recalcTotal() {
@@ -416,9 +594,9 @@ class ExpensePortal {
               ${claims.map(c => `
                 <tr>
                   <td><strong>${c.name}</strong></td>
-                  <td>${c.claim_date || 'â€”'}</td>
-                  <td>${c.department || 'â€”'}</td>
-                  <td>â‚¹ ${this._fmt(c.total_claimed_amount)}</td>
+                  <td>${c.claim_date || '—'}</td>
+                  <td>${c.department || '—'}</td>
+                  <td>₹ ${this._fmt(c.total_claimed_amount)}</td>
                   <td>${this._badge(c.workflow_state)}</td>
                   <td style="max-width:180px;font-size:12px;color:var(--gray-400);">
                     ${c.remarks ? `<em>${c.remarks}</em>` : 'â€”'}
@@ -465,13 +643,13 @@ class ExpensePortal {
 
     const itemRows = (doc.expenses || []).map(i => `
       <tr>
-        <td>${i.expense_type || 'â€”'}</td>
-        <td>${i.description || 'â€”'}</td>
-        <td>â‚¹ ${this._fmt(i.amount)}</td>
-        <td>${i.mode_of_payment || 'â€”'}</td>
+        <td>${i.expense_type || '—'}</td>
+        <td>${i.description || '—'}</td>
+        <td>₹ ${this._fmt(i.amount)}</td>
+        <td>${i.mode_of_payment || '—'}</td>
         <td>${i.receipt
               ? `<a href="${i.receipt}" target="_blank" style="color:var(--bright-blue);font-size:12px;">View</a>`
-              : 'â€”'}</td>
+              : '—'}</td>
       </tr>`).join('');
 
     const remarksBox = doc.remarks ? `
@@ -490,14 +668,14 @@ class ExpensePortal {
       <div class="form-group" style="margin-bottom:16px;">
         <label class="form-label">Remarks (required to reject)</label>
         <textarea id="mgr-remarks" class="form-control" rows="3"
-                  placeholder="Add remarksâ€¦" style="resize:vertical;"></textarea>
+                  placeholder="Add remarks…" style="resize:vertical;"></textarea>
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-primary" id="btn-approve-claim" data-name="${doc.name}">
-          âœ“ Approve
+          ✓ Approve
         </button>
         <button class="btn btn-danger" id="btn-reject-claim" data-name="${doc.name}">
-          âœ— Reject
+          ✗ Reject
         </button>
       </div>` : '';
 
@@ -532,7 +710,7 @@ class ExpensePortal {
         </div>
 
         <div style="text-align:right;margin-top:16px;font-size:15px;font-weight:700;color:var(--navy-dark);">
-          Total Claimed: â‚¹ ${this._fmt(doc.total_claimed_amount)}
+          Total Claimed: ₹ ${this._fmt(doc.total_claimed_amount)}
         </div>
 
         ${managerPanel}
@@ -582,7 +760,7 @@ class ExpensePortal {
         return `
           ${i > 0 ? `<div class="ep-workflow-line ${isDone ? 'done' : ''}"></div>` : ''}
           <div class="ep-workflow-step ${cls}">
-            <div class="step-dot">${isDone ? 'âœ“' : i + 1}</div>
+            <div class="step-dot">${isDone ? '✓' : i + 1}</div>
             <span>${s}</span>
           </div>`;
       }).join('') +
@@ -621,7 +799,7 @@ class ExpensePortal {
     if (!wrap) return;
     const t = document.createElement('div');
     t.className = `ep-toast${type === 'error' ? ' error' : ''}`;
-    t.innerHTML = `<span>${type === 'error' ? 'âœ•' : 'âœ“'}</span><span>${msg}</span>`;
+    t.innerHTML = `<span>${type === 'error' ? '✖' : '✓'}</span><span>${msg}</span>`;
     wrap.appendChild(t);
     setTimeout(() => t.remove(), 3500);
   }
@@ -804,12 +982,127 @@ class ExpensePortal {
         ).join('')
       : '<p style="color:var(--gray-400);font-size:13px;">No policies configured yet.</p>';
 
-    document.getElementById('ep-content').innerHTML =
-      '<div class="ep-charts-grid">' +
-        '<div class="ep-chart-card"><div class="ep-chart-title">Spend by Category</div>' + byTypeBars + '</div>' +
-        '<div class="ep-chart-card"><div class="ep-chart-title">6-Month Trend</div><div class="ep-trend-bars">' + trendBars + '</div></div>' +
-      '</div>' +
-      '<div class="ep-card"><div class="ep-section-title">Expense Policies</div>' + policyRows + '</div>';
+    document.getElementById('ep-content').innerHTML = `
+      <div class="ep-card" style="margin-bottom:20px;padding:16px 24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="font-size:14px;font-weight:700;color:var(--navy-dark);display:flex;align-items:center;gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Analytics &amp; Export Controls
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-tertiary btn-sm" id="btn-export-csv" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Export CSV
+            </button>
+            <button class="btn btn-tertiary btn-sm" id="btn-print-analytics" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+              </svg>
+              Print Report
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div id="ep-analytics-print-area">
+        <div class="ep-charts-grid">
+          <div class="ep-chart-card"><div class="ep-chart-title">Spend by Category</div>${byTypeBars}</div>
+          <div class="ep-chart-card"><div class="ep-chart-title">6-Month Trend</div><div class="ep-trend-bars">${trendBars}</div></div>
+        </div>
+        <div class="ep-card"><div class="ep-section-title">Expense Policies</div>${policyRows}</div>
+      </div>`;
+
+    document.getElementById('btn-export-csv').addEventListener('click', async () => {
+      try {
+        const claims = await this._api('expense_manager_v2.api.expense.get_my_claims_filtered', { status: 'All' });
+        if (!claims || !claims.length) {
+          this._toast('No claims data to export.', 'error');
+          return;
+        }
+        
+        let csv = '\uFEFFClaim ID,Date,Department,Amount,Status,Remarks\n';
+        claims.forEach(c => {
+          const name = c.name || '';
+          const date = c.claim_date || '';
+          const dept = c.department || '';
+          const amount = c.total_claimed_amount || 0.0;
+          const status = c.workflow_state || 'Draft';
+          const remarks = (c.remarks || '').replace(/"/g, '""');
+          csv += `"${name}","${date}","${dept}",${amount},"${status}","${remarks}"\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `Expense_Report_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this._toast('CSV Export downloaded successfully!');
+      } catch (e) {
+        this._toast('Export failed: ' + e.message, 'error');
+      }
+    });
+
+    document.getElementById('btn-print-analytics').addEventListener('click', () => {
+      const now = new Date().toLocaleString();
+      const contentHtml = document.getElementById('ep-analytics-print-area').innerHTML;
+      
+      const w = window.open('', '_blank', 'width=900,height=800');
+      w.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Expense Analytics Report</title>
+          <style>
+            @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap");
+            body { font-family: "DM Sans", Arial, sans-serif; margin: 0; padding: 40px; color: #05133C; background: #FFF; }
+            .hdr { background: #05133C; color: #14F1B1; padding: 20px 28px; border-radius: 12px; margin-bottom: 24px; }
+            h1 { font-size: 22px; margin: 0; }
+            .meta { font-size: 13px; color: #B0B8D0; margin-top: 6px; }
+            .ep-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+            .ep-chart-card { background: #FFF; border: 1px solid #F4F4F5; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+            .ep-chart-title { font-size: 13px; font-weight: 700; color: #05133C; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 16px; }
+            .ep-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+            .ep-bar-label { width: 110px; font-size: 12px; font-weight: 500; color: #71717B; text-align: right; }
+            .ep-bar-track { flex: 1; height: 12px; background: #F4F4F5; border-radius: 99px; overflow: hidden; }
+            .ep-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #14F1B1 0%, #114EFF 100%); }
+            .ep-bar-value { font-size: 12px; font-weight: 600; color: #05133C; min-width: 80px; text-align: right; }
+            .ep-trend-bars { display: flex; align-items: flex-end; gap: 10px; height: 120px; padding-bottom: 28px; position: relative; }
+            .ep-trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; height: 100%; justify-content: flex-end; }
+            .ep-trend-bar { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #14F1B1, #114EFF); min-height: 4px; }
+            .ep-trend-label { position: absolute; bottom: -24px; font-size: 10px; color: #71717B; }
+            .ep-card { background: #FFF; border: 1px solid #F4F4F5; border-radius: 12px; padding: 24px; }
+            .ep-section-title { font-size: 16px; font-weight: 700; color: #05133C; margin-bottom: 16px; }
+            .ep-policy-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #F4F4F5; font-size: 13px; }
+            .ep-policy-name { font-weight: 600; color: #05133C; }
+            .ep-policy-cap { display: flex; gap: 16px; color: #71717B; }
+            .ep-policy-cap span { display: flex; align-items: center; gap: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="hdr">
+            <h1>Expense Analytics Report</h1>
+            <div class="meta">Generated by ${this.employee.employee_name || this.currentUser} | ${now}</div>
+          </div>
+          <div>${contentHtml}</div>
+          <div style="margin-top:40px;font-size:11px;color:#71717B;border-top:1px solid #F4F4F5;padding-top:12px;text-align:center;">
+            Bizaxl Expense Manager Platform
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      w.document.close();
+    });
   }
 
   /* ============================================================
@@ -855,13 +1148,18 @@ class ExpensePortal {
       ? '<button class="btn btn-secondary btn-sm" id="btn-amend-claim">Amend &amp; Resubmit</button>'
       : '';
 
+    const draftBtns = (doc.workflow_state === 'Draft')
+      ? '<button class="btn btn-primary btn-sm" id="btn-submit-draft">Send for Approval</button>' +
+        '<button class="btn btn-danger btn-sm" id="btn-decline-draft">Decline</button>'
+      : '';
+
     document.getElementById('ep-content').innerHTML =
       '<div id="ep-print-area"><div class="ep-card">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">' +
       '<div><div style="font-size:20px;font-weight:700;color:var(--navy-dark);">' + doc.name + '</div>' +
       '<div style="font-size:13px;color:var(--gray-400);margin-top:2px;">' + doc.employee_name + '  &nbsp;.&nbsp;  ' + doc.claim_date + (doc.department ? '  &nbsp;.&nbsp;  ' + doc.department : '') + '</div></div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-      this._badge(doc.workflow_state) + amendBtn +
+      this._badge(doc.workflow_state) + amendBtn + draftBtns +
       '<button class="btn btn-tertiary btn-sm" id="btn-print-claim">Print</button>' +
       '<button class="btn btn-tertiary btn-sm" id="btn-back-list">Back</button>' +
       '</div></div>' +
@@ -881,6 +1179,23 @@ class ExpensePortal {
         const res = await this._api('expense_manager_v2.api.expense.amend_claim',{claim_name:doc.name});
         this._toast(res.name + ' created as draft.');
         this._renderClaimDetail(res.name);
+      } catch(e) { this._toast(e.message,'error'); }
+    });
+
+    document.getElementById('btn-submit-draft')?.addEventListener('click', async () => {
+      try {
+        await this._api('expense_manager_v2.api.expense.submit_expense_claim',{claim_name:doc.name});
+        this._toast(doc.name + ' submitted for approval!');
+        this._renderClaimDetail(doc.name);
+      } catch(e) { this._toast(e.message,'error'); }
+    });
+
+    document.getElementById('btn-decline-draft')?.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to decline and delete this draft claim?')) return;
+      try {
+        await this._api('expense_manager_v2.api.expense.decline_draft_claim',{claim_name:doc.name});
+        this._toast(doc.name + ' draft claim declined.');
+        this._showView('my-claims');
       } catch(e) { this._toast(e.message,'error'); }
     });
 

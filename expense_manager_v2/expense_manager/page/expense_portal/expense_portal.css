@@ -396,3 +396,9 @@
   }
 }
 
+/* Hide redundant standard Frappe page header for this portal route */
+.page-container[data-page-route="expense_portal"] .page-head {
+  display: none !important;
+}
+
+

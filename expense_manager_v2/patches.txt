@@ -1,1 +1,3 @@
-[logger]
+[pre_model_sync]
+
+[post_model_sync]

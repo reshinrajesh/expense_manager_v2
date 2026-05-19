@@ -52,7 +52,44 @@ def get_dashboard_data():
             summary[state] += 1
         summary["total_amount"] += flt(c.total_claimed_amount)
 
-    return {"summary": summary, "recent_claims": claims}
+    # Calculate MoM comparison
+    from frappe.utils import today, add_months, add_days
+    curr_month_start = today()[:8] + "01"
+    prev_month_start = add_months(curr_month_start, -1)[:8] + "01"
+    prev_month_end = add_days(curr_month_start, -1)
+
+    curr_month_spend = frappe.db.get_value(
+        "Expense Claim",
+        {
+            "employee": employee,
+            "claim_date": (">=", curr_month_start),
+            "workflow_state": ("in", ["Approved", "Pending Approval"])
+        },
+        "SUM(total_claimed_amount)"
+    ) or 0.0
+
+    prev_month_spend = frappe.db.get_value(
+        "Expense Claim",
+        {
+            "employee": employee,
+            "claim_date": ["between", [prev_month_start, prev_month_end]],
+            "workflow_state": ("in", ["Approved", "Pending Approval"])
+        },
+        "SUM(total_claimed_amount)"
+    ) or 0.0
+
+    if prev_month_spend > 0:
+        mom_percent = round(((curr_month_spend - prev_month_spend) / prev_month_spend) * 100, 1)
+    else:
+        mom_percent = 100.0 if curr_month_spend > 0 else 0.0
+
+    return {
+        "summary": summary,
+        "recent_claims": claims,
+        "mom_percent": mom_percent,
+        "curr_month_spend": flt(curr_month_spend),
+        "prev_month_spend": flt(prev_month_spend)
+    }
 
 
 # ------------------------------------------------------------------
@@ -127,14 +164,26 @@ def create_expense_claim(data):
 
 
 # ------------------------------------------------------------------
-# Submit an expense claim (Draft → Pending Approval)
-# ------------------------------------------------------------------
 @frappe.whitelist()
 def submit_expense_claim(claim_name):
     doc = frappe.get_doc("Expense Claim", claim_name)
     _assert_own_claim(doc)
     doc.submit()
     return {"message": f"{claim_name} submitted for approval."}
+
+
+# ------------------------------------------------------------------
+# Decline a draft expense claim (delete draft document)
+# ------------------------------------------------------------------
+@frappe.whitelist()
+def decline_draft_claim(claim_name):
+    doc = frappe.get_doc("Expense Claim", claim_name)
+    _assert_own_claim(doc)
+    if doc.workflow_state != "Draft":
+        frappe.throw(_("Only Draft claims can be declined."))
+    frappe.delete_doc("Expense Claim", claim_name, ignore_permissions=True)
+    return {"message": f"{claim_name} declined and deleted successfully."}
+
 
 
 # ------------------------------------------------------------------
@@ -325,8 +374,8 @@ def get_analytics_data():
     """, as_dict=True)
 
     monthly = frappe.db.sql(f"""
-        SELECT DATE_FORMAT(ec.claim_date,'%%b %%Y') AS month_label,
-               DATE_FORMAT(ec.claim_date,'%%Y-%%m') AS month_sort,
+        SELECT DATE_FORMAT(ec.claim_date,'%b %Y') AS month_label,
+               DATE_FORMAT(ec.claim_date,'%Y-%m') AS month_sort,
                SUM(ec.total_claimed_amount)          AS total
         FROM `tabExpense Claim` ec
         WHERE ec.claim_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
@@ -378,3 +427,28 @@ def get_my_claims_filtered(status=None, from_date=None, to_date=None,
         FROM `tabExpense Claim` ec {where}
         ORDER BY ec.claim_date DESC
     """, values, as_dict=True)
+
+
+# ------------------------------------------------------------------
+# NEW: Get current employee's spent totals for current calendar month
+# ------------------------------------------------------------------
+@frappe.whitelist()
+def get_current_month_spends():
+    user = frappe.session.user
+    employee = _get_current_employee(user)
+    if not employee:
+        return {}
+    from frappe.utils import today, flt
+    start_date = today()[:8] + "01"
+    
+    spends = frappe.db.sql("""
+        SELECT eci.expense_type, SUM(eci.amount) AS total
+        FROM `tabExpense Claim Item` eci
+        JOIN `tabExpense Claim` ec ON ec.name = eci.parent
+        WHERE ec.employee = %s 
+          AND ec.claim_date >= %s
+          AND ec.workflow_state IN ('Approved','Pending Approval')
+        GROUP BY eci.expense_type
+    """, (employee, start_date), as_dict=True)
+    
+    return {r.expense_type: flt(r.total) for r in spends}
