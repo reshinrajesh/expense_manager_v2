@@ -415,3 +415,28 @@ def get_my_claims_filtered(status=None, from_date=None, to_date=None,
         FROM `tabExpense Claim` ec {where}
         ORDER BY ec.claim_date DESC
     """, values, as_dict=True)
+
+
+# ------------------------------------------------------------------
+# NEW: Get current employee's spent totals for current calendar month
+# ------------------------------------------------------------------
+@frappe.whitelist()
+def get_current_month_spends():
+    user = frappe.session.user
+    employee = _get_current_employee(user)
+    if not employee:
+        return {}
+    from frappe.utils import today, flt
+    start_date = today()[:8] + "01"
+    
+    spends = frappe.db.sql("""
+        SELECT eci.expense_type, SUM(eci.amount) AS total
+        FROM `tabExpense Claim Item` eci
+        JOIN `tabExpense Claim` ec ON ec.name = eci.parent
+        WHERE ec.employee = %s 
+          AND ec.claim_date >= %s
+          AND ec.workflow_state IN ('Approved','Pending Approval')
+        GROUP BY eci.expense_type
+    """, (employee, start_date), as_dict=True)
+    
+    return {r.expense_type: flt(r.total) for r in spends}

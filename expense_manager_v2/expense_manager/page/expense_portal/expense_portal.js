@@ -57,17 +57,19 @@ class ExpensePortal {
       console.warn('ExpensePortal: boot data unavailable, fetchingâ€¦');
     }
 
-    // Preload dropdowns and policies
-    const [types, modes, ccs, analytics] = await Promise.all([
+    // Preload dropdowns, policies, and current month spends
+    const [types, modes, ccs, analytics, monthSpends] = await Promise.all([
       this._api('expense_manager_v2.api.expense.get_expense_types'),
       this._api('expense_manager_v2.api.expense.get_modes_of_payment'),
       this._api('expense_manager_v2.api.expense.get_cost_centers'),
       this._api('expense_manager_v2.api.expense.get_analytics_data'),
+      this._api('expense_manager_v2.api.expense.get_current_month_spends'),
     ]);
     this.dropdowns.expenseTypes  = types  || [];
     this.dropdowns.modes         = modes  || [];
     this.dropdowns.costCenters   = ccs    || [];
     this.policies                = analytics ? (analytics.policies || []) : [];
+    this.currentMonthSpends      = monthSpends || {};
   }
 
   /* ---------- Shell ---------- */
@@ -328,7 +330,18 @@ class ExpensePortal {
         <td><input type="text" class="li-desc" placeholder="Description"></td>
         <td><input type="number" class="li-amount" min="0" step="0.01" placeholder="0.00"></td>
         <td><select class="li-mode"><option value="">— None —</option>${modeOpts}</select></td>
-        <td><input type="text" class="li-receipt" placeholder="Attachment URL"></td>
+        <td>
+          <div class="ep-upload-btn-wrap" style="display:flex;align-items:center;gap:6px;">
+            <button class="btn btn-tertiary btn-sm ep-row-upload-btn" type="button" style="padding:4px 8px;font-size:11px;min-width:unset;display:inline-flex;align-items:center;gap:3px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              Upload
+            </button>
+            <span class="ep-row-upload-status" style="font-size:11px;color:var(--gray-400);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">No file</span>
+            <input type="hidden" class="li-receipt">
+          </div>
+        </td>
         <td>
           <button class="btn btn-danger btn-sm ep-remove-row" style="padding:6px 8px;min-width:unset;"
                   title="Remove row">✖</button>
@@ -345,7 +358,8 @@ class ExpensePortal {
         this._recalcTotal();
       };
     });
-    // Add input and change events for policy checking
+
+    // Add input and change events for policy checking & file uploads
     document.querySelectorAll('.ep-line-row').forEach(row => {
       const typeSelect = row.querySelector('.li-type');
       const amountInput = row.querySelector('.li-amount');
@@ -357,6 +371,77 @@ class ExpensePortal {
       
       typeSelect.onchange = handler;
       amountInput.oninput = handler;
+
+      // Handle direct receipt file upload
+      const uploadBtn = row.querySelector('.ep-row-upload-btn');
+      const statusSpan = row.querySelector('.ep-row-upload-status');
+      const hiddenInput = row.querySelector('.li-receipt');
+
+      if (uploadBtn && !uploadBtn.dataset.bound) {
+        uploadBtn.dataset.bound = "true";
+        uploadBtn.onclick = () => {
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'image/*,application/pdf';
+          fileInput.onchange = async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            statusSpan.style.color = 'var(--gray-400)';
+            statusSpan.textContent = 'Uploading...';
+            uploadBtn.disabled = true;
+
+            try {
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('is_private', 0);
+              formData.append('folder', 'Home');
+
+              const response = await fetch('/api/method/upload_file', {
+                method: 'POST',
+                headers: {
+                  'X-Frappe-CSRF-Token': frappe.csrf_token || ''
+                },
+                body: formData
+              });
+
+              if (!response.ok) throw new Error('Upload failed');
+              const resData = await response.json();
+              const fileUrl = resData.message?.file_url;
+
+              if (fileUrl) {
+                hiddenInput.value = fileUrl;
+                statusSpan.style.color = 'var(--success)';
+                statusSpan.innerHTML = `<span style="font-weight:600;">✓</span> ${file.name}`;
+                
+                // Add a dynamic View button or link
+                let viewBtn = row.querySelector('.ep-row-view-file-btn');
+                if (!viewBtn) {
+                  viewBtn = document.createElement('a');
+                  viewBtn.className = 'btn btn-tertiary btn-sm ep-row-view-file-btn';
+                  viewBtn.target = '_blank';
+                  viewBtn.style.padding = '4px 6px';
+                  viewBtn.style.fontSize = '10px';
+                  viewBtn.style.minWidth = 'unset';
+                  viewBtn.style.marginLeft = '4px';
+                  viewBtn.textContent = 'View';
+                  uploadBtn.parentElement.appendChild(viewBtn);
+                }
+                viewBtn.href = fileUrl;
+              } else {
+                throw new Error('No URL returned');
+              }
+            } catch (e) {
+              console.error(e);
+              statusSpan.style.color = 'var(--danger)';
+              statusSpan.textContent = 'Failed';
+            } finally {
+              uploadBtn.disabled = false;
+            }
+          };
+          fileInput.click();
+        };
+      }
     });
   }
 
@@ -375,8 +460,11 @@ class ExpensePortal {
     amountInput.style.borderColor = '';
     
     if (policy && amountVal > 0) {
-      const cap = parseFloat(policy.max_amount_per_claim || 0);
-      if (cap > 0 && amountVal > cap) {
+      const claimCap = parseFloat(policy.max_amount_per_claim || 0);
+      const monthCap = parseFloat(policy.max_amount_per_month || 0);
+      
+      // 1. Check Per-Claim Cap
+      if (claimCap > 0 && amountVal > claimCap) {
         amountInput.style.borderColor = 'var(--danger)';
         const warning = document.createElement('div');
         warning.className = 'ep-policy-warning';
@@ -384,8 +472,35 @@ class ExpensePortal {
         warning.style.fontSize = '10px';
         warning.style.fontWeight = '600';
         warning.style.marginTop = '4px';
-        warning.innerHTML = `⚠️ Exceeds cap of ₹${this._fmt(cap)}`;
+        warning.innerHTML = `⚠️ Exceeds per-claim cap of ₹${this._fmt(claimCap)}`;
         cell.appendChild(warning);
+        return;
+      }
+      
+      // 2. Check Monthly Cap
+      if (monthCap > 0) {
+        // Sum up all rows in this form with the same type
+        let formTotalForType = 0;
+        document.querySelectorAll('.ep-line-row').forEach(r => {
+          if (r.querySelector('.li-type').value === type) {
+            formTotalForType += parseFloat(r.querySelector('.li-amount').value || 0);
+          }
+        });
+        
+        const spentThisMonth = parseFloat(this.currentMonthSpends[type] || 0);
+        const projectedTotal = spentThisMonth + formTotalForType;
+        
+        if (projectedTotal > monthCap) {
+          amountInput.style.borderColor = 'var(--danger)';
+          const warning = document.createElement('div');
+          warning.className = 'ep-policy-warning';
+          warning.style.color = 'var(--danger)';
+          warning.style.fontSize = '10px';
+          warning.style.fontWeight = '600';
+          warning.style.marginTop = '4px';
+          warning.innerHTML = `⚠️ Exceeds monthly cap of ₹${this._fmt(monthCap)} (Spent: ₹${this._fmt(spentThisMonth)})`;
+          cell.appendChild(warning);
+        }
       }
     }
   }
