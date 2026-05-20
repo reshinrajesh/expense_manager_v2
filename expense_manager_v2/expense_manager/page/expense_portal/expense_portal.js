@@ -51,7 +51,8 @@ class ExpensePortal {
     try {
       const boot = frappe.boot;
       this.employee  = boot.expense_employee || {};
-      this.isManager = (boot.expense_roles || []).includes('Expense Manager');
+      const roles    = boot.expense_roles || [];
+      this.isManager = roles.includes('Expense Manager') || roles.includes('System Manager');
     } catch (e) {
       console.warn('ExpensePortal: boot data unavailable, fetchingâ€¦');
     }
@@ -101,6 +102,11 @@ class ExpensePortal {
   }
 
   _showView(view) {
+    if ((view === 'manager-queue' || view === 'analytics') && !this.isManager) {
+      this._showView('dashboard');
+      return;
+    }
+
     this.currentView = view;
 
     // Update nav highlight
