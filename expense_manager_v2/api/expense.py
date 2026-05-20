@@ -195,6 +195,8 @@ def decline_draft_claim(claim_name):
 def approve_claim(claim_name, remarks=None):
     _assert_manager_role()
     doc = frappe.get_doc("Expense Claim", claim_name)
+    if doc.employee == _get_current_employee(frappe.session.user):
+        frappe.throw(_("You cannot approve or reject your own expense claims."))
     doc.workflow_state = "Approved"
     doc.remarks = remarks or ""
     doc.save(ignore_permissions=True)
@@ -211,6 +213,8 @@ def reject_claim(claim_name, remarks):
     if not remarks:
         frappe.throw(_("Remarks are required when rejecting a claim."))
     doc = frappe.get_doc("Expense Claim", claim_name)
+    if doc.employee == _get_current_employee(frappe.session.user):
+        frappe.throw(_("You cannot approve or reject your own expense claims."))
     doc.workflow_state = "Rejected"
     doc.remarks = remarks
     doc.save(ignore_permissions=True)
@@ -365,7 +369,7 @@ def get_analytics_data():
     employee   = _get_current_employee(user)
     is_manager = ("Expense Manager" in frappe.get_roles(user) or
                   "System Manager"  in frappe.get_roles(user))
-    emp_filter = "" if is_manager else f"AND ec.employee = '{frappe.db.escape(employee or '')}'"
+    emp_filter = "" if is_manager else f"AND ec.employee = {frappe.db.escape(employee or '')}"
 
     by_type = frappe.db.sql(f"""
         SELECT eci.expense_type, SUM(eci.amount) AS total

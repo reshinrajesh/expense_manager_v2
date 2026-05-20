@@ -661,7 +661,7 @@ class ExpensePortal {
       </div>` : '';
 
     // Manager action panel
-    const managerPanel = (this.isManager && doc.workflow_state === 'Pending Approval') ? `
+    const managerPanel = (this.isManager && doc.workflow_state === 'Pending Approval' && doc.employee !== this.employee.name) ? `
       <hr class="ep-divider">
       <div class="ep-section-title">Manager Actions</div>
       <div class="form-group" style="margin-bottom:16px;">
@@ -1181,7 +1181,7 @@ class ExpensePortal {
         '<p style="font-size:13px;color:' + remarksColor + ';">' + doc.remarks + '</p></div>'
       : '';
 
-    const managerPanel = (this.isManager && doc.workflow_state === 'Pending Approval')
+    const managerPanel = (this.isManager && doc.workflow_state === 'Pending Approval' && doc.employee !== this.employee.name)
       ? '<hr class="ep-divider"><div class="ep-section-title">Manager Actions</div>' +
         '<div class="form-group" style="margin-bottom:16px;"><label class="form-label">Remarks (required to reject)</label>' +
         '<textarea id="mgr-remarks" class="form-control" rows="3" placeholder="Add remarks..." style="resize:vertical;"></textarea></div>' +
