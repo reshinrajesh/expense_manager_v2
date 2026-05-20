@@ -180,6 +180,13 @@ def update_expense_claim(claim_name, data):
 
     was_submitted = doc.docstatus == 1
 
+    if was_submitted:
+        frappe.db.set_value("Expense Claim", doc.name, "docstatus", 0)
+        frappe.db.set_value("Expense Claim", doc.name, "workflow_state", "Draft")
+        frappe.db.sql("delete from `tabExpense Claim Item` where parent=%s", doc.name)
+        # Reload the document so that the in-memory doc has the correct modified timestamp and docstatus = 0
+        doc = frappe.get_doc("Expense Claim", doc.name)
+
     doc.claim_date = data.get("claim_date") or today()
     doc.cost_center = data.get("cost_center")
 
@@ -193,13 +200,6 @@ def update_expense_claim(claim_name, data):
             "mode_of_payment": item.get("mode_of_payment"),
             "receipt":         item.get("receipt"),
         })
-
-    if was_submitted:
-        doc.workflow_state = "Draft"
-        doc.docstatus = 0
-        frappe.db.set_value("Expense Claim", doc.name, "docstatus", 0)
-        frappe.db.set_value("Expense Claim", doc.name, "workflow_state", "Draft")
-        frappe.db.sql("delete from `tabExpense Claim Item` where parent=%s", doc.name)
 
     doc.save(ignore_permissions=False)
     return {"name": doc.name, "message": "Expense Claim updated successfully."}
