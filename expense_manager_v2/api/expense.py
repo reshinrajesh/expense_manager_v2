@@ -164,7 +164,7 @@ def create_expense_claim(data):
 
 
 # ------------------------------------------------------------------
-# Update an existing draft expense claim
+# Update an existing draft or pending expense claim
 # ------------------------------------------------------------------
 @frappe.whitelist()
 def update_expense_claim(claim_name, data):
@@ -175,8 +175,10 @@ def update_expense_claim(claim_name, data):
     doc = frappe.get_doc("Expense Claim", claim_name)
     _assert_own_claim(doc)
     
-    if doc.workflow_state != "Draft":
-        frappe.throw(_("Only Draft claims can be updated."))
+    if doc.workflow_state not in ["Draft", "Pending Approval"]:
+        frappe.throw(_("Only Draft and Pending Approval claims can be updated."))
+
+    was_submitted = doc.docstatus == 1
 
     doc.claim_date = data.get("claim_date") or today()
     doc.cost_center = data.get("cost_center")
@@ -191,6 +193,13 @@ def update_expense_claim(claim_name, data):
             "mode_of_payment": item.get("mode_of_payment"),
             "receipt":         item.get("receipt"),
         })
+
+    if was_submitted:
+        doc.workflow_state = "Draft"
+        doc.docstatus = 0
+        frappe.db.set_value("Expense Claim", doc.name, "docstatus", 0)
+        frappe.db.set_value("Expense Claim", doc.name, "workflow_state", "Draft")
+        frappe.db.sql("delete from `tabExpense Claim Item` where parent=%s", doc.name)
 
     doc.save(ignore_permissions=False)
     return {"name": doc.name, "message": "Expense Claim updated successfully."}

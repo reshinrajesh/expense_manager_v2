@@ -1257,15 +1257,23 @@ class ExpensePortal {
         '</div>'
       : '';
 
-    const amendBtn = (!this.isManager && rejected)
+    const isOwnClaim = this.employee && doc.employee === this.employee.name;
+
+    const amendBtn = (isOwnClaim && rejected)
       ? '<button class="btn btn-secondary btn-sm" id="btn-amend-claim">Amend &amp; Resubmit</button>'
       : '';
 
-    const draftBtns = (!doc.workflow_state || doc.workflow_state === 'Draft')
-      ? '<button class="btn btn-secondary btn-sm" id="btn-edit-claim">Edit Claim</button>' +
-        '<button class="btn btn-primary btn-sm" id="btn-submit-draft">Send for Approval</button>' +
-        '<button class="btn btn-danger btn-sm" id="btn-decline-draft">Decline</button>'
-      : '';
+    let draftBtns = '';
+    if (isOwnClaim) {
+      if (!doc.workflow_state || doc.workflow_state === 'Draft') {
+        draftBtns = '<button class="btn btn-secondary btn-sm" id="btn-edit-claim">Edit Claim</button>' +
+          '<button class="btn btn-primary btn-sm" id="btn-submit-draft">Send for Approval</button>' +
+          '<button class="btn btn-danger btn-sm" id="btn-decline-draft">Decline</button>';
+      } else if (doc.workflow_state === 'Pending Approval') {
+        draftBtns = '<button class="btn btn-secondary btn-sm" id="btn-edit-claim">Edit Claim</button>';
+      }
+    }
+
 
     document.getElementById('ep-content').innerHTML =
       '<div id="ep-print-area"><div class="ep-card">' +
