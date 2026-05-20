@@ -49,6 +49,10 @@ doc_events = {
     "Expense Claim": {
         "on_submit":             "expense_manager_v2.expense_manager.doctype.expense_claim.expense_claim.on_submit",
         "on_update_after_submit":"expense_manager_v2.expense_manager.doctype.expense_claim.expense_claim.on_update_after_submit",
+    },
+    "Employee": {
+        "on_update":             "expense_manager_v2.api.expense.auto_assign_employee_role",
+        "after_insert":          "expense_manager_v2.api.expense.auto_assign_employee_role"
     }
 }
 

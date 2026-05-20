@@ -247,22 +247,46 @@ class ExpensePortal {
   /* ============================================================
      VIEW: New Expense Claim Form
      ============================================================ */
-  _renderNewClaim() {
+  async _renderNewClaim(editClaimName = null) {
+    let doc = null;
+    if (editClaimName) {
+      document.getElementById('ep-page-title').textContent = 'Edit Expense Claim';
+      doc = await this._api('expense_manager_v2.api.expense.get_claim_detail', { claim_name: editClaimName });
+    } else {
+      document.getElementById('ep-page-title').textContent = 'New Expense Claim';
+    }
+
     const typeOpts = this.dropdowns.expenseTypes
       .map(t => `<option value="${t.name}">${t.expense_type_name}</option>`).join('');
     const modeOpts = this.dropdowns.modes
       .map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+    
+    const costCenterVal = doc ? (doc.cost_center || '') : '';
     const ccOpts   = `<option value="">— None —</option>` + this.dropdowns.costCenters
-      .map(c => `<option value="${c.name}">${c.cost_center_name}</option>`).join('');
+      .map(c => `<option value="${c.name}" ${c.name === costCenterVal ? 'selected' : ''}>${c.cost_center_name}</option>`).join('');
+
+    const claimDateVal = doc ? doc.claim_date : new Date().toISOString().slice(0,10);
+    
+    let rowsHtml = '';
+    let rowIdx = 0;
+    if (doc && doc.expenses && doc.expenses.length > 0) {
+      doc.expenses.forEach(item => {
+        rowsHtml += this._newLineItemRow(typeOpts, modeOpts, rowIdx++, item);
+      });
+    } else {
+      rowsHtml = this._newLineItemRow(typeOpts, modeOpts, rowIdx++);
+    }
+
+    const formTitle = editClaimName ? `Edit Claim ${editClaimName}` : 'Claim Header';
 
     const html = `
       <div class="ep-card">
-        <div class="ep-section-title">Claim Header</div>
+        <div class="ep-section-title">${formTitle}</div>
         <div class="ep-form-grid" id="ep-new-claim-form">
           <div class="form-group">
             <label class="form-label">Claim Date <span style="color:var(--danger)">*</span></label>
             <input type="date" id="nc-date" class="form-control"
-                   value="${new Date().toISOString().slice(0,10)}">
+                   value="${claimDateVal}">
           </div>
           <div class="form-group">
             <label class="form-label">Cost Center</label>
@@ -285,7 +309,7 @@ class ExpensePortal {
             </tr>
           </thead>
           <tbody id="ep-line-items-body">
-            ${this._newLineItemRow(typeOpts, modeOpts, 0)}
+            ${rowsHtml}
           </tbody>
         </table>
 
@@ -307,7 +331,14 @@ class ExpensePortal {
 
     document.getElementById('ep-content').innerHTML = html;
 
-    let rowIdx = 1;
+    // Recalculate total initially
+    this._recalcTotal();
+
+    // Check policies on pre-populated rows
+    document.querySelectorAll('.ep-line-row').forEach(row => {
+      this._checkRowPolicy(row);
+    });
+
     // Add line
     document.getElementById('btn-add-line').addEventListener('click', () => {
       document.getElementById('ep-line-items-body')
@@ -319,22 +350,41 @@ class ExpensePortal {
 
     // Save draft
     document.getElementById('btn-save-draft').addEventListener('click', async () => {
-      await this._submitNewClaim(false);
+      await this._submitNewClaim(false, editClaimName);
     });
 
     // Submit
     document.getElementById('btn-submit-claim').addEventListener('click', async () => {
-      await this._submitNewClaim(true);
+      await this._submitNewClaim(true, editClaimName);
     });
   }
 
-  _newLineItemRow(typeOpts, modeOpts, idx) {
+  _newLineItemRow(typeOpts, modeOpts, idx, values = null) {
+    const typeValue = values ? (values.expense_type || '') : '';
+    const descValue = values ? (values.description || '') : '';
+    const amountValue = values ? (values.amount || '') : '';
+    const modeValue = values ? (values.mode_of_payment || '') : '';
+    const receiptValue = values ? (values.receipt || '') : '';
+
+    const selectedTypeOpts = this.dropdowns.expenseTypes
+      .map(t => `<option value="${t.name}" ${t.name === typeValue ? 'selected' : ''}>${t.expense_type_name}</option>`).join('');
+    const selectedModeOpts = this.dropdowns.modes
+      .map(m => `<option value="${m.name}" ${m.name === modeValue ? 'selected' : ''}>${m.name}</option>`).join('');
+
+    const hasReceipt = !!receiptValue;
+    const filename = hasReceipt ? receiptValue.split('/').pop() : 'No file';
+    const statusColor = hasReceipt ? 'var(--success)' : 'var(--gray-400)';
+    const statusText = hasReceipt ? `<span style="font-weight:600;">✓</span> ${filename}` : 'No file';
+    const viewButton = hasReceipt 
+      ? `<a class="btn btn-tertiary btn-sm ep-row-view-file-btn" target="_blank" style="padding:4px 6px;font-size:10px;min-width:unset;margin-left:4px;" href="${receiptValue}">View</a>` 
+      : '';
+
     return `
       <tr class="ep-line-row" id="ep-line-row-${idx}">
-        <td><select class="li-type" required><option value="">Select…</option>${typeOpts}</select></td>
-        <td><input type="text" class="li-desc" placeholder="Description"></td>
-        <td><input type="number" class="li-amount" min="0" step="0.01" placeholder="0.00"></td>
-        <td><select class="li-mode"><option value="">— None —</option>${modeOpts}</select></td>
+        <td><select class="li-type" required><option value="">Select…</option>${selectedTypeOpts}</select></td>
+        <td><input type="text" class="li-desc" placeholder="Description" value="${descValue}"></td>
+        <td><input type="number" class="li-amount" min="0" step="0.01" placeholder="0.00" value="${amountValue}"></td>
+        <td><select class="li-mode"><option value="">— None —</option>${selectedModeOpts}</select></td>
         <td>
           <div class="ep-upload-btn-wrap" style="display:flex;align-items:center;gap:6px;">
             <button class="btn btn-tertiary btn-sm ep-row-upload-btn" type="button" style="padding:4px 8px;font-size:11px;min-width:unset;display:inline-flex;align-items:center;gap:3px;">
@@ -343,8 +393,9 @@ class ExpensePortal {
               </svg>
               Upload
             </button>
-            <span class="ep-row-upload-status" style="font-size:11px;color:var(--gray-400);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">No file</span>
-            <input type="hidden" class="li-receipt">
+            <span class="ep-row-upload-status" style="font-size:11px;color:${statusColor};max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${statusText}</span>
+            <input type="hidden" class="li-receipt" value="${receiptValue}">
+            ${viewButton}
           </div>
         </td>
         <td>
@@ -532,7 +583,7 @@ class ExpensePortal {
     return items;
   }
 
-  async _submitNewClaim(doSubmit) {
+  async _submitNewClaim(doSubmit, editClaimName = null) {
     const items = this._collectLineItems();
     if (!items.length || items.some(i => !i.expense_type || !i.amount)) {
       this._toast('Please fill in all required line item fields.', 'error');
@@ -546,11 +597,20 @@ class ExpensePortal {
     };
 
     try {
-      const res = await this._api(
-        'expense_manager_v2.api.expense.create_expense_claim',
-        { data: JSON.stringify(payload) }
-      );
-      this._toast(`${res.name} saved!`);
+      let res;
+      if (editClaimName) {
+        res = await this._api(
+          'expense_manager_v2.api.expense.update_expense_claim',
+          { claim_name: editClaimName, data: JSON.stringify(payload) }
+        );
+        this._toast(`${res.name} updated!`);
+      } else {
+        res = await this._api(
+          'expense_manager_v2.api.expense.create_expense_claim',
+          { data: JSON.stringify(payload) }
+        );
+        this._toast(`${res.name} saved!`);
+      }
 
       if (doSubmit) {
         await this._api('expense_manager_v2.api.expense.submit_expense_claim',
@@ -1202,7 +1262,8 @@ class ExpensePortal {
       : '';
 
     const draftBtns = (!doc.workflow_state || doc.workflow_state === 'Draft')
-      ? '<button class="btn btn-primary btn-sm" id="btn-submit-draft">Send for Approval</button>' +
+      ? '<button class="btn btn-secondary btn-sm" id="btn-edit-claim">Edit Claim</button>' +
+        '<button class="btn btn-primary btn-sm" id="btn-submit-draft">Send for Approval</button>' +
         '<button class="btn btn-danger btn-sm" id="btn-decline-draft">Decline</button>'
       : '';
 
@@ -1226,6 +1287,10 @@ class ExpensePortal {
 
     document.getElementById('btn-back-list').addEventListener('click', () => this._showView('my-claims'));
     document.getElementById('btn-print-claim').addEventListener('click', () => this._printClaim(doc));
+
+    document.getElementById('btn-edit-claim')?.addEventListener('click', async () => {
+      await this._renderNewClaim(doc.name);
+    });
 
     document.getElementById('btn-amend-claim')?.addEventListener('click', async () => {
       try {

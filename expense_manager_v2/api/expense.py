@@ -164,6 +164,40 @@ def create_expense_claim(data):
 
 
 # ------------------------------------------------------------------
+# Update an existing draft expense claim
+# ------------------------------------------------------------------
+@frappe.whitelist()
+def update_expense_claim(claim_name, data):
+    import json
+    if isinstance(data, str):
+        data = json.loads(data)
+
+    doc = frappe.get_doc("Expense Claim", claim_name)
+    _assert_own_claim(doc)
+    
+    if doc.workflow_state != "Draft":
+        frappe.throw(_("Only Draft claims can be updated."))
+
+    doc.claim_date = data.get("claim_date") or today()
+    doc.cost_center = data.get("cost_center")
+
+    # Clear old expenses and append new ones
+    doc.set("expenses", [])
+    for item in data.get("expenses", []):
+        doc.append("expenses", {
+            "expense_type":    item.get("expense_type"),
+            "description":     item.get("description"),
+            "amount":          flt(item.get("amount", 0)),
+            "mode_of_payment": item.get("mode_of_payment"),
+            "receipt":         item.get("receipt"),
+        })
+
+    doc.save(ignore_permissions=False)
+    return {"name": doc.name, "message": "Expense Claim updated successfully."}
+
+
+
+# ------------------------------------------------------------------
 @frappe.whitelist()
 def submit_expense_claim(claim_name):
     doc = frappe.get_doc("Expense Claim", claim_name)
@@ -458,3 +492,26 @@ def get_current_month_spends():
     """, (employee, start_date), as_dict=True)
     
     return {r.expense_type: flt(r.total) for r in spends}
+
+
+# ------------------------------------------------------------------
+# NEW: Auto-assign Expense Employee role when an Employee record is saved
+# ------------------------------------------------------------------
+def auto_assign_employee_role(doc, method=None):
+    """Automatically assigns the Expense Employee role to the user linked to an Employee record."""
+    if doc.user_id:
+        try:
+            if not frappe.db.exists("Has Role", {"parent": doc.user_id, "role": "Expense Employee"}):
+                role_doc = frappe.get_doc({
+                    "doctype": "Has Role",
+                    "parent": doc.user_id,
+                    "parentfield": "roles",
+                    "parenttype": "User",
+                    "role": "Expense Employee"
+                })
+                role_doc.insert(ignore_permissions=True)
+                frappe.clear_cache(user=doc.user_id)
+                print(f"Successfully auto-assigned Expense Employee role to {doc.user_id}")
+        except Exception as e:
+            frappe.log_error(message=str(e), title="Auto Assign Expense Employee Role Failed")
+
